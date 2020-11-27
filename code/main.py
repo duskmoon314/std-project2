@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# @Author       : BobAnkh
+# @Github       : https://github.com/BobAnkh
+# @Date         : 2020-11-26 21:03:58
+# @LastEditTime : 2020-11-27 16:51:06
+# @Description  : 
+
 import librosa
 import librosa.display
 from scipy import signal
@@ -19,7 +28,7 @@ def read_wav(path, n):
     从给定路径中读取指定序号的四个声音信号
     返回一个len=4 的list，为四个声音信号
     '''
-    paths = [path+'/'+str(n)+'_mic'+str(i+1)+'.wav' for i in range(4)]
+    paths = [os.path.join(path, str(n) + '_mic' + str(i+1) + '.wav') for i in range(4)]
     wavs = []
     for p in paths:
         wavs.append(librosa.load(p, sr=None)[0])
@@ -47,7 +56,7 @@ def reduce_noise(input):
 
 
 def main():
-    PATH = 'data/train'
+    PATH = os.path.join('data', 'train')
     n = int(os.listdir(PATH)[-2].split('_')[0])
     for i in range(n):
         # 读取数据
