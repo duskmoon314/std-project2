@@ -6,6 +6,8 @@ import numpy as np
 import os
 import re
 import argparse
+from multiprocessing import Pool
+from multiprocessing import cpu_count
 # import matplotlib.pyplot as plt
 
 # 定义参数
@@ -215,7 +217,7 @@ def wav_process(PATH, i):
     return np.mean(processed_angle)
 
 
-def main():
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='''This tool will estimate the Angle of Arrival (AoA) of the sound source from audio files.''')
     parser.add_argument('-d', '--directory', dest='directory', required=True,
@@ -228,15 +230,16 @@ def main():
     # n = int(os.listdir(PATH)[-2].split('_')[0])
     angles = []
     print("Start Processing!")
+    args = []
     for i in range(n):
-        # 对数据进行处理
-        ang = wav_process(PATH, i)
-        angles.append(ang)
+        args.append((PATH, i))
+    # 采用进程池来对数据进行并行处理
+    pool = Pool(cpu_count())
+    angles = pool.starmap(wav_process, args)
+    pool.close()
+    pool.join()
     with open(os.path.join(PATH, 'result.txt'), 'w') as f:
         for elem in angles:
             f.write(str(elem))
             f.write('\n')
-
-
-if __name__ == '__main__':
-    main()
+    print('Results are saved in', os.path.join(PATH, 'result.txt'))
