@@ -1,22 +1,21 @@
-import librosa
-import librosa.display
-from scipy import signal
-import noisereduce
-import numpy as np
+import argparse
 import os
 import re
-import argparse
-from multiprocessing import Pool
-from multiprocessing import cpu_count
-# import matplotlib.pyplot as plt
+from multiprocessing import Pool, cpu_count
+
+import librosa
+import librosa.display
+import noisereduce
+import numpy as np
+from scipy import signal
 
 # 定义参数
 SR_ORIGIN = 20000  # 原始数据的采样率，已测试过所有数据相同
 BAND_LOW = 0.02  # 带通滤波的下限 200Hz
 BAND_HIGH = 0.3  # 带通滤波的上限 3000Hz
 WINDOW_LEN = 1024  # 带通滤波的窗长
-BANDPASS_FILTER = signal.firwin(
-    WINDOW_LEN, [BAND_LOW, BAND_HIGH], pass_zero=False)  # 带通FIR滤波器
+BANDPASS_FILTER = signal.firwin(WINDOW_LEN, [BAND_LOW, BAND_HIGH],
+                                pass_zero=False)  # 带通FIR滤波器
 C0 = 343  # 声速
 D1 = 0.2
 D2 = 0.2 / np.sqrt(2)
@@ -34,8 +33,10 @@ def read_wav(path, n):
     Returns:
         list: 4个mic的声音信号
     '''
-    paths = [os.path.join(path, str(n) + '_mic' + str(i+1) + '.wav')
-             for i in range(4)]
+    paths = [
+        os.path.join(path,
+                     str(n) + '_mic' + str(i + 1) + '.wav') for i in range(4)
+    ]
     wavs = []
     for p in paths:
         wavs.append(librosa.load(p, sr=None)[0])
@@ -61,8 +62,9 @@ def reduce_noise(input):
         y_band = signal.lfilter(BANDPASS_FILTER, [1.0], y)
 
         # 去除通带中的噪声
-        y_r = noisereduce.reduce_noise(
-            audio_clip=y_band, noise_clip=y_band[0:4000], verbose=False)
+        y_r = noisereduce.reduce_noise(audio_clip=y_band,
+                                       noise_clip=y_band[0:4000],
+                                       verbose=False)
 
         output.append(y_r)
 
@@ -103,7 +105,7 @@ def calc_relevance(ch1, ch2):
         array: 相关函数
     '''
     n_sample = len(ch1)
-    n_fft = 2 ** np.ceil(np.log2(2 * n_sample - 1)).astype(np.int16)
+    n_fft = 2**np.ceil(np.log2(2 * n_sample - 1)).astype(np.int16)
     CH1 = np.fft.fft(ch1, n_fft)
     CH2 = np.fft.fft(ch2, n_fft)
     G = np.multiply(CH1, np.conj(CH2))
@@ -127,15 +129,7 @@ def calc_angle(delta_n, sr, c0, d):
     delta_t = delta_n / sr
     cos_theta = c0 * delta_t / d
 
-    # 非线性映射，减小两端的估计误差
-    if cos_theta > 0.995:
-        theta = np.arccos(1 - 10.92 * np.exp(24.17 - 32.16 * cos_theta))
-    elif cos_theta < -0.995:
-        theta = np.arccos(-1 + 10.92 * np.exp(24.17 + 32.16 * cos_theta))
-    else:
-        theta = np.arccos(cos_theta)
-
-    theta_degree = theta / np.pi * 180
+    theta_degree = np.arccos(cos_theta) / np.pi * 180
     return theta_degree
 
 
@@ -152,7 +146,8 @@ def estimate_angle(wav_rn, sample_rate):
     '''
     # 升采样
     sr_up = sample_rate * 16
-    ch_up = resample(wav_rn[0], wav_rn[1], wav_rn[2], wav_rn[3], sample_rate, sr_up)
+    ch_up = resample(wav_rn[0], wav_rn[1], wav_rn[2], wav_rn[3], sample_rate,
+                     sr_up)
     angle_list = []
     for i in range(3):
         for j in range(i + 1, 4):
@@ -161,13 +156,13 @@ def estimate_angle(wav_rn, sample_rate):
             if j - i == 2:
                 n_neighbor = int(sr_up * 2 * D1 / C0)
                 delta_n = np.argmax(
-                    r[n_mid - n_neighbor: n_mid + n_neighbor]) - n_neighbor
+                    r[n_mid - n_neighbor:n_mid + n_neighbor]) - n_neighbor
                 angle = calc_angle(delta_n, sr_up, C0, D1)
                 angle_list.append(angle)
             else:
                 n_neighbor = int(sr_up * 2 * D2 / C0)
                 delta_n = np.argmax(
-                    r[n_mid - n_neighbor: n_mid + n_neighbor]) - n_neighbor
+                    r[n_mid - n_neighbor:n_mid + n_neighbor]) - n_neighbor
                 angle = calc_angle(delta_n, sr_up, C0, D2)
                 angle_list.append(angle)
     return angle_list
@@ -185,7 +180,7 @@ def wav_process(PATH, i):
         float: 计算得到的音源角度（单位：°）
     '''
     # 读取数据
-    wav, sr = read_wav(PATH, i+1)
+    wav, sr = read_wav(PATH, i + 1)
     # 进行降噪
     wav_rn = reduce_noise(wav)
     # 计算角度
@@ -195,12 +190,14 @@ def wav_process(PATH, i):
     theta13p, theta13n = (180 + angle_13) % 360, 180 - angle_13
     theta24p, theta24n = (270 + angle_24) % 360, 270 - angle_24
     if angle_13 > 15 and angle_13 < 165:
-        if (theta24p > theta13p -10 and theta24p < theta13p +10) or (theta24n > theta13p -10 and theta24n < theta13p +10):
+        if (theta24p > theta13p - 10 and theta24p < theta13p + 10) or (
+                theta24n > theta13p - 10 and theta24n < theta13p + 10):
             scope_mid = theta13p
         else:
             scope_mid = theta13n
     else:
-        if (theta13p > theta24p -10 and theta13p < theta24p +10) or (theta13n > theta24p -10 and theta13n < theta24p +10):
+        if (theta13p > theta24p - 10 and theta13p < theta24p + 10) or (
+                theta13n > theta24p - 10 and theta13n < theta24p + 10):
             scope_mid = theta24p
         else:
             scope_mid = theta24n
@@ -230,8 +227,13 @@ def wav_process(PATH, i):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='''This tool will estimate the Angle of Arrival (AoA) of the sound source from audio files.''')
-    parser.add_argument('-d', '--directory', dest='directory', required=True,
+        description=
+        '''This tool can estimate the Angle of Arrival (AoA) of the sound source from audio files.'''
+    )
+    parser.add_argument('-d',
+                        '--directory',
+                        dest='directory',
+                        required=True,
                         help='the parent directory of audio files')
 
     args = parser.parse_args()
@@ -253,7 +255,9 @@ if __name__ == '__main__':
     angles = pool.starmap(wav_process, args)
     pool.close()
     pool.join()
+    # 对角度进行四舍五入处理
     angles = np.round(np.array(angles))
+    # 将结果输出到文件中
     with open(os.path.join(PATH, 'result.txt'), 'w') as f:
         for elem in angles:
             f.write("{0:.7e}\n".format(elem))
