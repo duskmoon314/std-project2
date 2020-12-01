@@ -206,15 +206,26 @@ def wav_process(PATH, i):
             scope_mid = theta24n
     angle_base = [135, 180, 225, 225, 270, 315]
     processed_angle = []
+    sum = 0
+    weights = 0
     for i, elem in enumerate(angle_list):
         if elem > 15 and elem < 165:
+            # 加权计算最终角度
+            if elem > 65 and elem < 115:
+                weight = 100
+            else:
+                weight = 1
             ap = (angle_base[i] + elem + 360) % 360
             an = (angle_base[i] - elem + 360) % 360
             if ap > scope_mid - 10 and ap < scope_mid + 10:
                 processed_angle.append(ap)
+                sum = sum + ap * weight
+                weights = weights + weight
             else:
                 processed_angle.append(an)
-    return np.mean(processed_angle)
+                sum = sum + an * weight
+                weights = weights + weight
+    return sum / weights
 
 
 if __name__ == '__main__':
@@ -225,11 +236,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     PATH = args.directory
-
+    # PATH = 'data/train'
     n = int(len(list(filter(lambda x: re.match('.*\.wav', x) != None, os.listdir(PATH)))) / 4)
     # n = int(os.listdir(PATH)[-2].split('_')[0])
     angles = []
     print("Start Processing!")
+    # for i in range(n):
+    #     # 对数据进行处理
+    #     ang = wav_process(PATH, i)
+    #     angles.append(ang)
     args = []
     for i in range(n):
         args.append((PATH, i))
@@ -238,8 +253,8 @@ if __name__ == '__main__':
     angles = pool.starmap(wav_process, args)
     pool.close()
     pool.join()
+    angles = np.round(np.array(angles))
     with open(os.path.join(PATH, 'result.txt'), 'w') as f:
         for elem in angles:
-            f.write(str(elem))
-            f.write('\n')
+            f.write("{0:.7e}\n".format(elem))
     print('Results are saved in', os.path.join(PATH, 'result.txt'))
