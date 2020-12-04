@@ -1,7 +1,6 @@
 import argparse
-import os
-import re
 import glob
+import os
 from multiprocessing import Pool, cpu_count
 
 import librosa
@@ -224,17 +223,18 @@ def wav_process(PATH, i):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='''This tool can estimate the Angle of Arrival (AoA) of the sound source from audio files.'''
+        description=
+        'This tool can estimate the Angle of Arrival (AoA) of the sound source from audio files.'
     )
     parser.add_argument('-d',
                         '--directory',
                         dest='directory',
-                        default='data/train',
+                        default='test',
                         help='the parent directory of audio files')
 
     args = parser.parse_args()
     PATH = args.directory
-    # PATH = 'data/train'
+    # PATH = 'test'
     n = int(len(glob.glob(os.path.join(PATH, '*.wav'))) / 4)
     # n = int(os.listdir(PATH)[-2].split('_')[0])
     angles = []
