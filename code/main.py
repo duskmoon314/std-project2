@@ -14,9 +14,8 @@ SR_ORIGIN = 20000  # 原始数据的采样率，已测试过所有数据相同
 BAND_LOW = 0.02  # 带通滤波的下限 200Hz
 BAND_HIGH = 0.3  # 带通滤波的上限 3000Hz
 WINDOW_LEN = 1024  # 带通滤波的窗长
-BANDPASS_FILTER = signal.firwin(
-    WINDOW_LEN, [BAND_LOW, BAND_HIGH], pass_zero=False
-)  # 带通FIR滤波器
+BANDPASS_FILTER = signal.firwin(WINDOW_LEN, [BAND_LOW, BAND_HIGH],
+                                pass_zero=False)  # 带通FIR滤波器
 C0 = 343  # 声速
 D1 = 0.2
 D2 = 0.2 / np.sqrt(2)
@@ -35,7 +34,8 @@ def read_wav(path, n):
         list: 4个mic的声音信号
     """
     paths = [
-        os.path.join(path, str(n) + "_mic" + str(i + 1) + ".wav") for i in range(4)
+        os.path.join(path,
+                     str(n) + "_mic" + str(i + 1) + ".wav") for i in range(4)
     ]
     wavs = []
     for p in paths:
@@ -62,9 +62,9 @@ def reduce_noise(input):
         y_band = signal.lfilter(BANDPASS_FILTER, [1.0], y)
 
         # 去除通带中的噪声
-        y_r = noisereduce.reduce_noise(
-            audio_clip=y_band, noise_clip=y_band[0:4000], verbose=False
-        )
+        y_r = noisereduce.reduce_noise(audio_clip=y_band,
+                                       noise_clip=y_band[0:4000],
+                                       verbose=False)
 
         output.append(y_r)
 
@@ -102,7 +102,7 @@ def calc_relevance(ch1, ch2):
         array: 相关函数
     """
     n_sample = len(ch1)
-    n_fft = 2 ** np.ceil(np.log2(2 * n_sample - 1)).astype(np.int16)
+    n_fft = 2**np.ceil(np.log2(2 * n_sample - 1)).astype(np.int16)
     CH1 = np.fft.fft(ch1, n_fft)
     CH2 = np.fft.fft(ch2, n_fft)
     G = np.multiply(CH1, np.conj(CH2))
@@ -127,13 +127,12 @@ def calc_angle(delta_n, sr, c0, d):
     cos_theta = c0 * delta_t / d
 
     if cos_theta > 0.995:
-        theta_degree = (
-            np.arccos(1 - 10.9 * np.exp(24.2 - 32.2 * cos_theta)) / np.pi * 180
-        )
+        theta_degree = (np.arccos(1 - 10.9 * np.exp(24.2 - 32.2 * cos_theta)) /
+                        np.pi * 180)
     elif cos_theta < -0.995:
         theta_degree = (
-            np.arccos(-1 + 10.9 * np.exp(24.2 + 32.2 * cos_theta)) / np.pi * 180
-        )
+            np.arccos(-1 + 10.9 * np.exp(24.2 + 32.2 * cos_theta)) / np.pi *
+            180)
     else:
         theta_degree = np.arccos(cos_theta) / np.pi * 180
 
@@ -162,15 +161,15 @@ def estimate_angle(wav_rn, sample_rate):
             if j - i == 2:
                 n_neighbor = int(sr_up * 2 * D1 / C0)
                 delta_n = (
-                    np.argmax(r[n_mid - n_neighbor : n_mid + n_neighbor]) - n_neighbor
-                )
+                    np.argmax(r[n_mid - n_neighbor:n_mid + n_neighbor]) -
+                    n_neighbor)
                 angle = calc_angle(delta_n, sr_up, C0, D1)
                 angle_list.append(angle)
             else:
                 n_neighbor = int(sr_up * 2 * D2 / C0)
                 delta_n = (
-                    np.argmax(r[n_mid - n_neighbor : n_mid + n_neighbor]) - n_neighbor
-                )
+                    np.argmax(r[n_mid - n_neighbor:n_mid + n_neighbor]) -
+                    n_neighbor)
                 angle = calc_angle(delta_n, sr_up, C0, D2)
                 angle_list.append(angle)
     return angle_list
@@ -198,22 +197,20 @@ def wav_process(PATH, i):
     theta13p, theta13n = (180 + angle_13) % 360, 180 - angle_13
     theta24p, theta24n = (270 + angle_24) % 360, 270 - angle_24
     if angle_13 > 15 and angle_13 < 165:
-        if (
-            (theta24p > theta13p - 10 and theta24p < theta13p + 10)
-            or (theta24p + 360 > theta13p - 10 and theta24p + 360 < theta13p + 10)
-            or (theta24n > theta13p - 10 and theta24n < theta13p + 10)
-            or (theta24n + 360 > theta13p - 10 and theta24n + 360 < theta13p + 10)
-        ):
+        if ((theta24p > theta13p - 10 and theta24p < theta13p + 10) or
+            (theta24p + 360 > theta13p - 10 and theta24p + 360 < theta13p + 10)
+                or (theta24n > theta13p - 10 and theta24n < theta13p + 10)
+                or (theta24n + 360 > theta13p - 10
+                    and theta24n + 360 < theta13p + 10)):
             scope_mid = theta13p
         else:
             scope_mid = theta13n
     else:
-        if (
-            (theta13p > theta24p - 10 and theta13p < theta24p + 10)
-            or (theta13p + 360 > theta24p - 10 and theta13p + 360 < theta24p + 10)
-            or (theta13n > theta24p - 10 and theta13n < theta24p + 10)
-            or (theta13n + 360 > theta24p - 10 and theta13n + 360 < theta24p + 10)
-        ):
+        if ((theta13p > theta24p - 10 and theta13p < theta24p + 10) or
+            (theta13p + 360 > theta24p - 10 and theta13p + 360 < theta24p + 10)
+                or (theta13n > theta24p - 10 and theta13n < theta24p + 10)
+                or (theta13n + 360 > theta24p - 10
+                    and theta13n + 360 < theta24p + 10)):
             scope_mid = theta24p
         else:
             scope_mid = theta24n
@@ -243,7 +240,8 @@ def wav_process(PATH, i):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="This tool can estimate the Angle of Arrival (AoA) of the sound source from audio files."
+        description=
+        "This tool can estimate the Angle of Arrival (AoA) of the sound source from audio files."
     )
     parser.add_argument(
         "-d",
@@ -258,8 +256,8 @@ if __name__ == "__main__":
     # PATH = 'test'
     n = int(len(glob.glob(os.path.join(PATH, "*.wav"))) / 4)
     # n = int(os.listdir(PATH)[-2].split('_')[0])
-    # angles = []
-    # print("Start Processing!")
+    angles = []
+    print("Start Processing!")
     # for i in range(n):
     #     # 对数据进行处理
     #     ang = wav_process(PATH, i)
@@ -279,4 +277,3 @@ if __name__ == "__main__":
         for elem in angles:
             f.write("{0:.7e}\n".format(elem))
     print("Results are saved in", os.path.join(PATH, "result.txt"))
-
