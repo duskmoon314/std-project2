@@ -1,6 +1,7 @@
 import argparse
 import os
 import re
+import glob
 from multiprocessing import Pool, cpu_count
 
 import librosa
@@ -71,26 +72,23 @@ def reduce_noise(input):
     return output
 
 
-def resample(ch1, ch2, ch3, ch4, orig_sr, target_sr):
+def resample(ch, orig_sr, target_sr):
     '''
     变换采样率
 
     Args:
-        ch1 (array): mic1的音频信号
-        ch2 (array): mic2的音频信号
-        ch3 (array): mic3的音频信号
-        ch4 (array): mic4的音频信号
+        ch (array): 4个mic的音频信号
         orig_sr (int): 原始采样率
         target_sr (int): 新采样率
 
     Returns:
         list: 四个mic变换采样之后的结果
     '''
-    ch1_new = librosa.resample(ch1, orig_sr, target_sr)
-    ch2_new = librosa.resample(ch2, orig_sr, target_sr)
-    ch3_new = librosa.resample(ch3, orig_sr, target_sr)
-    ch4_new = librosa.resample(ch4, orig_sr, target_sr)
-    return ch1_new, ch2_new, ch3_new, ch4_new
+    ch_new = []
+    for n in range(len(ch)):
+        ch_new.append(librosa.resample(ch[n], orig_sr, target_sr))
+
+    return ch_new
 
 
 def calc_relevance(ch1, ch2):
@@ -146,8 +144,7 @@ def estimate_angle(wav_rn, sample_rate):
     '''
     # 升采样
     sr_up = sample_rate * 16
-    ch_up = resample(wav_rn[0], wav_rn[1], wav_rn[2], wav_rn[3], sample_rate,
-                     sr_up)
+    ch_up = resample(wav_rn, sample_rate, sr_up)
     angle_list = []
     for i in range(3):
         for j in range(i + 1, 4):
@@ -227,19 +224,18 @@ def wav_process(PATH, i):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description=
-        '''This tool can estimate the Angle of Arrival (AoA) of the sound source from audio files.'''
+        description='''This tool can estimate the Angle of Arrival (AoA) of the sound source from audio files.'''
     )
     parser.add_argument('-d',
                         '--directory',
                         dest='directory',
-                        required=True,
+                        default='data/train',
                         help='the parent directory of audio files')
 
     args = parser.parse_args()
     PATH = args.directory
     # PATH = 'data/train'
-    n = int(len(list(filter(lambda x: re.match('.*\.wav', x) != None, os.listdir(PATH)))) / 4)
+    n = int(len(glob.glob(os.path.join(PATH, '*.wav'))) / 4)
     # n = int(os.listdir(PATH)[-2].split('_')[0])
     angles = []
     print("Start Processing!")
