@@ -192,13 +192,21 @@ def wav_process(PATH, i):
     theta24p, theta24n = (270 + angle_24) % 360, 270 - angle_24
     if angle_13 > 15 and angle_13 < 165:
         if (theta24p > theta13p - 10 and theta24p < theta13p + 10) or (
-                theta24n > theta13p - 10 and theta24n < theta13p + 10):
+                theta24p + 360 > theta13p - 10
+                and theta24p + 360 < theta13p + 10) or (
+                    theta24n > theta13p - 10 and theta24n < theta13p + 10) or (
+                        theta24n + 360 > theta13p - 10
+                        and theta24n + 360 < theta13p + 10):
             scope_mid = theta13p
         else:
             scope_mid = theta13n
     else:
         if (theta13p > theta24p - 10 and theta13p < theta24p + 10) or (
-                theta13n > theta24p - 10 and theta13n < theta24p + 10):
+                theta13p + 360 > theta24p - 10
+                and theta13p + 360 < theta24p + 10) or (
+                    theta13n > theta24p - 10 and theta13n < theta24p + 10) or (
+                        theta13n + 360 > theta24p - 10
+                        and theta13n + 360 < theta24p + 10):
             scope_mid = theta24p
         else:
             scope_mid = theta24n
