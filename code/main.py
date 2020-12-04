@@ -125,7 +125,12 @@ def calc_angle(delta_n, sr, c0, d):
     '''
     delta_t = delta_n / sr
     cos_theta = c0 * delta_t / d
-
+    if cos_theta > 1:
+        cos_theta = 1.0
+    elif cos_theta < -1:
+        cos_theta = -1.0
+    else:
+        pass
     theta_degree = np.arccos(cos_theta) / np.pi * 180
     return theta_degree
 
